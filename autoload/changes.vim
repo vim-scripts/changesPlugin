@@ -1,11 +1,12 @@
 " Changes.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.2
+" Version:  0.3
 " Authors:  Christian Brabandt <cb@256bit.org>
 " Last Change: 2010/04/11
-" Script:  <not yet available>
+" Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
-" GetLatestVimScripts: <not yet available>
+" Documentation: see :help changesPlugin.txt
+" GetLatestVimScripts: 3052 2 :AutoInstall: ChangesPlugin.vim
 
 " Documentation:"{{{1
 " To see differences with your file, exexute:
@@ -160,6 +161,7 @@ fu! changes#GetDiff()"{{{1
     let b:diffhl['del'] = s:temp['del']
     call changes#PlaceSigns(b:diffhl)
     call changes#DiffOff()
+    redraw
     let &lz=o_lz
     let &fdm=o_fdm
 endfu

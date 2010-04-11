@@ -1,12 +1,11 @@
 *changesPlugin.txt*  Print indication of changed lines for a buffer 
 
 Author:  Christian Brabandt <cb@256bit.org>
-Version: 0.2  Apr, 10th, 2010
+Version: 0.3  Apr, 10th, 2010
 Copyright: (c) 2010 by Christian Brabandt 	 *changesPlugin-copyright*
 	   The VIM LICENSE applies to changesPlugin.txt (see |copyright|)
 	   except use unicode instead of "Vim".  NO WARRANTY, EXPRESS OR
 	   IMPLIED.  USE AT-YOUR-OWN-RISK.
-
 
 ==============================================================================
                                                               *changesPlugin*
@@ -82,9 +81,11 @@ a Blue background, you can define it as follows in your |.vimrc| >
 In the same way, you can change DiffDelete for indicating deleted lines and
 DiffChange for indicating modified lines. You can also specify your favorite
 highlighting colors using your own build |colorscheme|.
-
 ==============================================================================
 3. changesPlugin History				*changesPlugin-history*
+    0.3: Apr 11, 2010:  BF: redraw, so that the diff window will not be
+			displayed
+			NF: enabled GLVS (see |GLVS|)
     0.2: Apr 11, 2010:	Added Documentation
 			created an autoload version
     0.1: Apr 10, 2010:	First working version
