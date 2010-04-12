@@ -1,7 +1,7 @@
 *changesPlugin.txt*  Print indication of changed lines for a buffer 
 
 Author:  Christian Brabandt <cb@256bit.org>
-Version: 0.3  Apr, 10th, 2010
+Version: 0.5  Apr, 12th, 2010
 Copyright: (c) 2010 by Christian Brabandt 	 *changesPlugin-copyright*
 	   The VIM LICENSE applies to changesPlugin.txt (see |copyright|)
 	   except use unicode instead of "Vim".  NO WARRANTY, EXPRESS OR
@@ -98,6 +98,11 @@ DiffChange for indicating modified lines. You can also specify your favorite
 highlighting colors using your own build |colorscheme|.
 ==============================================================================
 3. changesPlugin History				*changesPlugin-history*
+    0.5: Apr 12, 2010:  BF: error when trying to access b:diffhl in the
+			    scratch buffer. This should be fixed now (thanks
+			    Jeet Sukumaran!)
+			BF: Use the correct highlighting groups (thanks Jeet
+			    Sukumaran!)
     0.4: Apr 12, 2010:  NF: |ToggleChangesView|
 			NF: The autocommand checks, if the buffer has been
 			    modified, since the last time.

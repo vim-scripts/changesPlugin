@@ -1,12 +1,12 @@
 " Changes.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.4
+" Version:  0.5
 " Authors:  Christian Brabandt <cb@256bit.org>
 " Last Change: 2010/04/11
 " Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
 " Documentation: see :help changesPlugin.txt
-" GetLatestVimScripts: 3052 4 :AutoInstall: ChangesPlugin.vim
+" GetLatestVimScripts: 3052 5 :AutoInstall: ChangesPlugin.vim
 
 " Documentation:"{{{1
 " To see differences with your file, exexute:
@@ -96,7 +96,7 @@ fu! changes#Init()"{{{1
     let s:ids={}
     let s:signs["add"] = "texthl=DiffAdd text=+ texthl=DiffAdd " . ( (s:hl_lines) ? " linehl=DiffAdd" : "")
     let s:signs["del"] = "texthl=DiffDelete text=- texthl=DiffDelete " . ( (s:hl_lines) ? " linehl=DiffDelete" : "")
-    let s:signs["ch"] = "texthl=DiffChange text=* texthl=DiffChange " . ( (s:hl_lines) ? " linehl=DiffDelete" : "")
+    let s:signs["ch"] = "texthl=DiffChange text=* texthl=DiffChange " . ( (s:hl_lines) ? " linehl=DiffChange" : "")
 
     let s:ids["add"]   = hlID("DiffAdd")
     let s:ids["del"]   = hlID("DiffDelete")
@@ -127,16 +127,25 @@ endfu
 
 fu! changes#CheckLines(arg)"{{{1
     let line=1
+    " This should not be necessary, since b:diffhl for the scratch buffer
+    " should never be accessed. But just to be sure, we define it here
+"    if (!a:arg) && !exists("b:diffhl")
+"	let b:diffhl = {'del': []}
+"    endif
     while line <= line('$')
 	let id=diff_hlID(line,1)
 	if  (id == 0)
 	    let line+=1
 	    continue
-	elseif (id == s:ids["add"]) && a:arg
+	" Check for deleted lines in the diffed scratch buffer
+	" in the original buffer, there won't be any lines accessible
+	" that have been 'marked' deleted, so we need to check scratch
+	" buffer for added lines
+	elseif (id == s:ids['add']) && !a:arg
+	    let s:temp['del']   = s:temp['del'] + [ line ]
+	elseif (id == s:ids['add']) && a:arg
 	    let b:diffhl['add'] = b:diffhl['add'] + [ line ]
-	elseif (id == s:ids["add"]) && !a:arg
-		let s:temp['del'] = s:temp['del'] + [ line ]
-	else
+	elseif (id == s:ids['ch'])  && a:arg
 	    let b:diffhl['ch']  = b:diffhl['ch'] + [ line ]
 	endif
 	let line+=1
@@ -155,7 +164,6 @@ endfu
 
 fu! changes#GetDiff()"{{{1
     call changes#Init()
-    let b:changes_chg_tick = b:changedtick
     " Save some settings
     let o_lz   = &lz
     let o_fdm  = &fdm
