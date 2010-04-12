@@ -1,12 +1,12 @@
 " ChangesPlugin.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.3
+" Version:  0.4
 " Authors:  Christian Brabandt <cb@256bit.org>
-" Last Change: 2010/04/11
+" Last Change: 2010/04/12
 " Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
 " Documentation: see :help changesPlugin.txt
-" GetLatestVimScripts: 3052 2 :AutoInstall: ChangesPlugin.vim
+" GetLatestVimScripts: 3052 4 :AutoInstall: ChangesPlugin.vim
 
 
 " ---------------------------------------------------------------------
@@ -21,8 +21,14 @@ set cpo&vim
 let s:autocmd  = (exists("g:changes_autocmd")  ? g:changes_autocmd  : 0)
 " ------------------------------------------------------------------------------
 " Public Interface: {{{1
-com! EnableChanges  call changes#GetDiff()|:call changes#Output()
-com! DisableChanges call changes#CleanUp()
+com! EnableChanges	 call changes#GetDiff()|:call changes#Output()
+com! DisableChanges	 call changes#CleanUp()
+com! ToggleChangesView	 call changes#TCV()
+
+" Define the Shortcuts:
+com! DC	 DisableChanges
+com! EC	 EnableChanges
+com! TCV ToggleChangesView
 
 if s:autocmd
     call changes#Init()

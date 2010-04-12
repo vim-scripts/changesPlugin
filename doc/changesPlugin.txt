@@ -32,15 +32,27 @@ with |+signs|-support and |+diff|-support and you also need an executable diff
 command. If neither of these conditions are met, changePlugin.vim will issue a
 warning and abort.
 
-							 *:EnableChanges*
+							 *:EC* *:EnableChanges*
 By default the plugin is not enabled. To enable it enter >
     :EnableChanges
 When you run this command, changesPlugin.vim diffs the current file agains
 its saved file on disk and displays the changes in the first column.
 
-							*:DisableChanges*
+Alternatively, you can enter the shortcut >
+     :EC
+which basically calls :EnableChanes
+
+							 *:DC* *:DisableChanges*
 If you want to disable the plugin, enter >
     :DisableChanges
+or alternatively, you can enter the shortcut >
+     :DC
+
+						     *:TCV* *:ToggleChangesView*
+You can toggle, between turning on and off the indicator bars, using >
+     :ToggleChangeView
+or alternatively, you can use the shortcut >
+     :TCV
 
 ==============================================================================
 							*changesPlugin-Config*
@@ -61,6 +73,9 @@ however configure it to do so. This will use an |CursorHold| autocommand to
 update the indicator signs after |'updatetime'| seconds in Normal mode when
 no key is pressed. To enable this feature, put this in your |.vimrc| >
     let g:changes_autocmd=1
+
+This autocommand checks, whether there have been changes to the file, or else
+it won't update the view.
 
 2.3 Show what the indicator signs mean.
 By default, whenever you run |:EnableChanges|, changesVim will print a short
@@ -83,8 +98,17 @@ DiffChange for indicating modified lines. You can also specify your favorite
 highlighting colors using your own build |colorscheme|.
 ==============================================================================
 3. changesPlugin History				*changesPlugin-history*
+    0.4: Apr 12, 2010:  NF: |ToggleChangesView|
+			NF: The autocommand checks, if the buffer has been
+			    modified, since the last time.
+			BF: Do not mess with signs, that have not been placed
+			    by changesPlugin.vim
+			BF: CleanUp was seriously messed up (sorry, I must
+			    have been asleep, when writing that)
+			BF: Take care of 'foldcolumn' setting, which would be
+			    overwritten by the signs-column
     0.3: Apr 11, 2010:  BF: redraw, so that the diff window will not be
-			displayed
+			    displayed
 			NF: enabled GLVS (see |GLVS|)
     0.2: Apr 11, 2010:	Added Documentation
 			created an autoload version

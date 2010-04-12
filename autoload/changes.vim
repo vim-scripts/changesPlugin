@@ -1,12 +1,12 @@
 " Changes.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.3
+" Version:  0.4
 " Authors:  Christian Brabandt <cb@256bit.org>
 " Last Change: 2010/04/11
 " Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
 " Documentation: see :help changesPlugin.txt
-" GetLatestVimScripts: 3052 2 :AutoInstall: ChangesPlugin.vim
+" GetLatestVimScripts: 3052 4 :AutoInstall: ChangesPlugin.vim
 
 " Documentation:"{{{1
 " To see differences with your file, exexute:
@@ -33,7 +33,7 @@
 " By default changes.vim displays deleted lines using the hilighting
 " DiffDelete, added lines using DiffAdd and modified lines using
 " DiffChange.
-" You can see how these are defined, by issuing 
+" You can see how these are defined, by issuing
 " :hi DiffAdd
 " :hi DiffDelete
 " :hi DiffChange
@@ -44,7 +44,7 @@
 
 " Check preconditions"{{{1
 fu changes#Check()
-    if !has("diff") 
+    if !has("diff")
 	call changes#WarningMsg("Diff support not available in your Vim version.")
 	call changes#WarningMsg("changes plugin will not be working!")
 	finish
@@ -89,12 +89,14 @@ fu! changes#Init()"{{{1
     let s:hl_lines = (exists("g:changes_hl_lines") ? g:changes_hl_lines : 0)
     let s:autocmd  = (exists("g:changes_autocmd")  ? g:changes_autocmd  : 0)
     let s:verbose  = (exists("g:changes_verbose")  ? g:changes_verbose  : 1)
-
+    " This variable is a prefix for all placed signs.
+    " This is needed, to not mess with signs placed by the user
+    let s:sign_prefix = 99
     let s:signs={}
     let s:ids={}
     let s:signs["add"] = "texthl=DiffAdd text=+ texthl=DiffAdd " . ( (s:hl_lines) ? " linehl=DiffAdd" : "")
     let s:signs["del"] = "texthl=DiffDelete text=- texthl=DiffDelete " . ( (s:hl_lines) ? " linehl=DiffDelete" : "")
-    let s:signs["chg"] = "texthl=DiffChange text=* texthl=DiffChange " . ( (s:hl_lines) ? " linehl=DiffDelete" : "")
+    let s:signs["ch"] = "texthl=DiffChange text=* texthl=DiffChange " . ( (s:hl_lines) ? " linehl=DiffDelete" : "")
 
     let s:ids["add"]   = hlID("DiffAdd")
     let s:ids["del"]   = hlID("DiffDelete")
@@ -108,7 +110,7 @@ fu! changes#AuCmd(arg)"{{{1
     if s:autocmd && a:arg
 	augroup Changes
 		autocmd!
-		au CursorHold * :call changes#GetDiff()
+		au CursorHold * :call changes#UpdateView()
 	augroup END
     else
 	augroup Changes
@@ -120,68 +122,109 @@ endfu
 fu! changes#DefineSigns()"{{{1
     exe "sign define add" s:signs["add"]
     exe "sign define del" s:signs["del"]
-    exe "sign define ch"  s:signs["chg"]
+    exe "sign define ch"  s:signs["ch"]
 endfu
 
-fu! changes#GetDiff()"{{{1
-    call changes#Init()
-    let o_lz=&lz
-    let o_fdm=&fdm
-    setl lz
-    sign unplace *
-    call changes#MakeDiff()
-    let b:diffhl={'add': [], 'del': [], 'ch': []}
+fu! changes#CheckLines(arg)"{{{1
     let line=1
     while line <= line('$')
 	let id=diff_hlID(line,1)
 	if  (id == 0)
 	    let line+=1
 	    continue
-	elseif (id == s:ids["add"])
+	elseif (id == s:ids["add"]) && a:arg
 	    let b:diffhl['add'] = b:diffhl['add'] + [ line ]
+	elseif (id == s:ids["add"]) && !a:arg
+		let s:temp['del'] = s:temp['del'] + [ line ]
 	else
 	    let b:diffhl['ch']  = b:diffhl['ch'] + [ line ]
 	endif
 	let line+=1
     endw
-    " Switch to other buffer and check for deleted lines
-    wincmd p
-    " For some reason, getbufvar setbufvar do not work, so 
+endfu
+
+fu! changes#UpdateView()"{{{1
+    if !exists("b:changes_chg_tick")
+	let b:changes_chg_tick = 0
+    endif
+    " Only update, if there have been changes to the buffer
+    if  b:changes_chg_tick != b:changedtick
+	call changes#GetDiff()
+    endif
+endfu
+
+fu! changes#GetDiff()"{{{1
+    call changes#Init()
+    let b:changes_chg_tick = b:changedtick
+    " Save some settings
+    let o_lz   = &lz
+    let o_fdm  = &fdm
+    let b:ofdc = &fdc
+    " Lazy redraw
+    setl lz
+    " For some reason, getbufvar/setbufvar do not work, so
     " we use a temporary script variable here
-    let s:temp={'del': []}
-    let line=1
-    while line <= line('$')
-	let id=diff_hlID(line,1)
-	if (id == s:ids["add"])
-	    let s:temp['del'] = s:temp['del'] + [ line ]
-	endif
-	let line+=1
-    endw
-    wincmd p
+    let s:temp = {'del': []}
+    " Delete previously placed signs
+    "sign unplace *
+    call changes#UnPlaceSigns()
+"	for key in keys(s:signs)
+"	    exe "sign unplace " key
+"	endfor
+    call changes#MakeDiff()
+    let b:diffhl={'add': [], 'del': [], 'ch': []}
+    call changes#CheckLines(1)
+    " Switch to other buffer and check for deleted lines
+    noa wincmd p
+    call changes#CheckLines(0)
+    noa wincmd p
     let b:diffhl['del'] = s:temp['del']
     call changes#PlaceSigns(b:diffhl)
     call changes#DiffOff()
     redraw
     let &lz=o_lz
+    " I assume, the diff-mode messed up the folding settings,
+    " so we need to restore them here
+    "
+    " Should we also restore other fold related settings?
     let &fdm=o_fdm
+    if b:ofdc ==? 1
+	" When foldcolumn is 1, folds won't be shown because of
+	" the signs, so increasing its value by 1 so that folds will
+	" also be shown
+	let &fdc += 1
+    endif
+    let b:changes_view_enabled=1
 endfu
 
 fu! changes#PlaceSigns(dict)"{{{1
     for [ id, lines ] in items(a:dict)
 	for item in lines
-	    exe "sign place " . item . " line=" . item . " name=" . id . " buffer=" . bufnr('')
+	    exe "sign place " s:sign_prefix . item . " line=" . item . " name=" . id . " buffer=" . bufnr('')
 	endfor
     endfor
 endfu
-	    
+
+fu! changes#UnPlaceSigns()"{{{1
+    redir => a
+    silent sign place
+    redir end
+    let b=split(a,"\n")
+    let b=filter(b, 'v:val =~ "id=".s:sign_prefix')
+    let b=map(b, 'matchstr(v:val, ''id=\zs\d\+'')')
+    for id in b
+	exe "sign unplace" id
+    endfor
+endfu
+
 fu! changes#MakeDiff()"{{{1
     " Get diff for current buffer with original
-    vert new
+    noa vert new
     set bt=nofile
     r #
     0d_
     diffthis
-    wincmd p
+    noa wincmd p
     diffthis
 endfu
 
@@ -193,14 +236,28 @@ fu! changes#DiffOff()"{{{1
 endfu
 
 fu! changes#CleanUp()"{{{1
-    sign unplace *
-    for key in s:keys
+    " only delete signs, that have been set by this plugin
+    call changes#UnPlaceSigns()
+    for key in keys(s:signs)
 	exe "sign undefine " key
     endfor
-"    sign undefine del
-"    sign undefine ch
-    call changes#AuCmd(0)
+    if s:autocmd
+	call changes#AuCmd(0)
+    endif
 endfu
+
+fu! changes#TCV()"{{{1
+    if  exists("b:changes_view_enabled") && b:changes_view_enabled
+        DC
+        let &fdc=b:ofdc
+        let b:changes_view_enabled = 0
+        echo "Hiding changes since last save"
+    else
+	call changes#GetDiff()
+        let b:changes_view_enabled = 1
+        echo "Showing changes since last save"
+    endif
+endfunction
 
 
 " Modeline "{{{1
