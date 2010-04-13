@@ -1,12 +1,12 @@
 " Changes.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.5
+" Version:  0.6
 " Authors:  Christian Brabandt <cb@256bit.org>
-" Last Change: 2010/04/11
+" Last Change: 2010/04/13
 " Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
 " Documentation: see :help changesPlugin.txt
-" GetLatestVimScripts: 3052 5 :AutoInstall: ChangesPlugin.vim
+" GetLatestVimScripts: 3052 6 :AutoInstall: ChangesPlugin.vim
 
 " Documentation:"{{{1
 " To see differences with your file, exexute:
@@ -101,6 +101,7 @@ fu! changes#Init()"{{{1
     let s:ids["add"]   = hlID("DiffAdd")
     let s:ids["del"]   = hlID("DiffDelete")
     let s:ids["ch"]    = hlID("DiffChange")
+    let s:ids["ch2"]   = hlID("DiffText")
     call changes#DefineSigns()
     call changes#AuCmd(s:autocmd)
     call changes#Check()
@@ -145,7 +146,7 @@ fu! changes#CheckLines(arg)"{{{1
 	    let s:temp['del']   = s:temp['del'] + [ line ]
 	elseif (id == s:ids['add']) && a:arg
 	    let b:diffhl['add'] = b:diffhl['add'] + [ line ]
-	elseif (id == s:ids['ch'])  && a:arg
+	elseif ((id == s:ids['ch']) || (id == s:ids['ch2']))  && a:arg
 	    let b:diffhl['ch']  = b:diffhl['ch'] + [ line ]
 	endif
 	let line+=1
