@@ -1,44 +1,44 @@
 " Changes.vim - Using Signs for indicating changed lines
 " ---------------------------------------------------------------
-" Version:  0.10
+" Version:  0.11
 " Authors:  Christian Brabandt <cb@256bit.org>
-" Last Change: Wed, 28 Apr 2010 08:25:37 +0200
-
+" Last Change: Tue, 04 May 2010 21:16:28 +0200
 
 " Script:  http://www.vim.org/scripts/script.php?script_id=3052
 " License: VIM License
 " Documentation: see :help changesPlugin.txt
-" GetLatestVimScripts: 3052 10 :AutoInstall: ChangesPlugin.vim
+" GetLatestVimScripts: 3052 11 :AutoInstall: ChangesPlugin.vim
 
 " Documentation:"{{{1
 " See :h ChangesPlugin.txt
 
 " Check preconditions"{{{1
 fu! s:Check()
-    if !has("diff")
-	call add(s:msg,"Diff support not available in your Vim version.")
-	call add(s:msg,"changes plugin will not be working!")
-	finish
-    endif
-
-    if  !has("signs")
-	call add(s:msg,"Sign Support support not available in your Vim version.")
-	call add(s:msg,"changes plugin will not be working!")
-	finish
-    endif
-
-    if !executable("diff") || executable("diff") == -1
-	call add(s:msg,"No diff executable found")
-	call add(s:msg,"changes plugin will not be working!")
-	finish
-    endif
-
     " Check for the existence of unsilent
     if exists(":unsilent")
 	let s:echo_cmd='unsilent echomsg'
     else
 	let s:echo_cmd='echomsg'
     endif
+
+    if !has("diff")
+	call add(s:msg,"Diff support not available in your Vim version.")
+	call add(s:msg,"changes plugin will not be working!")
+	throw 'changes:abort'
+    endif
+
+    if  !has("signs")
+	call add(s:msg,"Sign Support support not available in your Vim version.")
+	call add(s:msg,"changes plugin will not be working!")
+	throw 'changes:abort'
+    endif
+
+    if !executable("diff") || executable("diff") == -1
+	call add(s:msg,"No diff executable found")
+	call add(s:msg,"changes plugin will not be working!")
+	throw 'changes:abort'
+    endif
+
 
     let s:sign_prefix = 99
     let s:ids={}
@@ -80,6 +80,8 @@ fu! changes#Output(force)"{{{1
 endfu
 
 fu! s:Init()"{{{1
+    " Message queue, that will be displayed.
+    let s:msg      = []
     " Only check the first time this file is loaded
     " It should not be neccessary to check every time
     if !exists("s:precheck")
@@ -89,8 +91,6 @@ fu! s:Init()"{{{1
     let s:hl_lines = (exists("g:changes_hl_lines")  ? g:changes_hl_lines   : 0)
     let s:autocmd  = (exists("g:changes_autocmd")   ? g:changes_autocmd    : 0)
     let s:verbose  = (exists("g:changes_verbose")   ? g:changes_verbose    : (exists("s:verbose") ? s:verbose : 1))
-    " Message queue, that will be displayed.
-    let s:msg      = []
     " Check against a file in a vcs system
     let s:vcs      = (exists("g:changes_vcs_check") ? g:changes_vcs_check  : 0)
     let b:vcs_type = (exists("g:changes_vcs_system")? g:changes_vcs_system : s:GuessVCSSystem())
@@ -121,6 +121,7 @@ fu! s:Init()"{{{1
 	  let s:temp_file=tempname()
       endif
     endif
+    let s:nodiff=0
 
     " This variable is a prefix for all placed signs.
     " This is needed, to not mess with signs placed by the user
@@ -136,7 +137,7 @@ fu! s:Init()"{{{1
 endfu
 
 fu! s:AuCmd(arg)"{{{1
-    if s:autocmd && a:arg
+    if a:arg
 	augroup Changes
 		autocmd!
 		let s:verbose=0
@@ -202,7 +203,7 @@ fu! changes#GetDiff(arg)"{{{1
     " a:arg == 3 Stay in diff mode
     try
 	call s:Init()
-    catch changes:NoVCS
+    catch /^changes:/
 	let s:verbose = 0
 	call s:WarningMsg()
 	return
@@ -242,25 +243,29 @@ fu! changes#GetDiff(arg)"{{{1
 	   \empty(values(b:diffhl)[2]))
 	    call add(s:msg, 'No differences found!')
 	    let s:verbose=0
+	    let s:nodiff=1
 	else
 	    call s:PlaceSigns(b:diffhl)
 	endif
-	if a:arg !=? 3
+	if a:arg !=? 3  || s:nodiff
 	    call s:DiffOff()
 	endif
 	" :diffoff resets some options (see :h :diffoff
 	" so we need to restore them here
-	let &fdm=o_fdm
-	if  o_fdc ==? 1
-	    " When foldcolumn is 1, folds won't be shown because of
-	    " the signs, so increasing its value by 1 so that folds will
-	    " also be shown
-	    let &fdc += 1
-	else
-	    let &fdc = o_fdc
+	" We don't reset the fdm, in case we are staying in diff mode
+	if a:arg != 3 || s:nodiff
+	    let &fdm=o_fdm
+	    if  o_fdc ==? 1
+		" When foldcolumn is 1, folds won't be shown because of
+		" the signs, so increasing its value by 1 so that folds will
+		" also be shown
+		let &fdc += 1
+	    else
+		let &fdc = o_fdc
+	    endif
+	    let &wrap = o_wrap
+	    let b:changes_view_enabled=1
 	endif
-	let &wrap = o_wrap
-	let b:changes_view_enabled=1
 	if a:arg ==# 2
 	   call s:ShowDifferentLines()
 	   let s:verbose=0
@@ -310,10 +315,12 @@ fu! s:MakeDiff()"{{{1
     " Get diff for current buffer with original
     let o_pwd = getcwd()
     let bnr = bufnr('%')
+    let ft  = &l:ft
     noa vert new
     set bt=nofile
     if !s:vcs
 	r #
+	let &l:ft=ft
     else
 	let vcs=getbufvar(bnr, 'vcs_type')
 	try
